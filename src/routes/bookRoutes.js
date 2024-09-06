@@ -12,7 +12,7 @@ OUTPUT - list of books with matching values as in input
 
 const express = require("express")
 const router  = express.Router();
-
+const {getBooksbyName,getBooksbyRange,getBooksbyFilters} = require('../controllers/book.controllers')
 
 router.get('/find',getBooksbyName);
 router.get('/rent',getBooksbyRange);
