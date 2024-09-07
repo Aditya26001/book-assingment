@@ -3,9 +3,13 @@
 Make a DB with two collections - Users and Books.
 
 Books should have the following fields
+
 • book name
+
 • category
+
 • rent per day
+
 
 Users - You decide
 
