@@ -18,15 +18,15 @@ const issueBook = asyncHandler(async(req,res)=>{
         throw new Error("Book not found");
     }
 
-    const user = await User.findOne({userName});
+    const user = await User.findOne({name : userName});
     if(!user) {
         res.status(404);
         throw new Error("User not found");
     }
 
     const transaction  = await Transaction.create({
-        bookId: book._id,
-        userId: user._id,
+        book: await Book.findById(book._id),
+        user: await User.findById(user._id),
         issueDate
     })
     if(!transaction){
@@ -35,8 +35,8 @@ const issueBook = asyncHandler(async(req,res)=>{
     }
 
     const populatedTransaction = await Transaction.findById(transaction._id)
-    .populate('userId','name email')
-    .populate('bookId','bookName')
+    .populate('user','name')
+    .populate('book','bookName')
 
     res.status(201).json(populatedTransaction);
 
@@ -45,26 +45,32 @@ const issueBook = asyncHandler(async(req,res)=>{
 const returnBook = asyncHandler(async (req, res) => {
     const { bookName, userName, returnDate } = req.body;
 
-    
-    const book = await Book.findOne({ bookName });
-    if (!book) return 
-        res.status(404).json({ message:'Book not found'});
+    const book = await Book.findOne({bookName : bookName });
+    if (!book) {
+        res.status(404);
+        throw new Error("Book not found");
+    }
 
-    const user = await User.findOne({userName});
-    if (!user) return r
-        res.status(404).json({ message:'User not found'});
+    const user = await User.findOne({name :userName});
+    if (!user) {
+        res.status(404);
+        throw new Error("User not found");
+    }
 
     const transaction = await Transaction.findOne({
-        bookId: book._id,
-        userId: user._id,
+        book: book._id,
+        user: user._id,
         returnDate: null
     });
 
     if (!transaction) return res.status(404).json({ message: 'Transaction not found' });
 
     const issueDate = new Date(transaction.issueDate);
-    const return_Date = new Date(returnDate);
-    const daysRented = Math.ceil((return_Date - issueDate) / (1000 * 60 * 60 * 24));
+    const return_Date = new Date();
+    let daysRented = Math.ceil((return_Date - issueDate) / (1000 * 60 * 60 * 24));
+     console.log(return_Date);
+    if(daysRented==0) daysRented = 1;
+    console.log(daysRented)
     const totalRent = daysRented * book.rentPerDay;
 
     transaction.returnDate = returnDate;
@@ -74,67 +80,76 @@ const returnBook = asyncHandler(async (req, res) => {
     res.json({ message: 'Book returned successfully', totalRent });
 });
 
-const getIssueHistory = asyncHandler(async (req,res) => {
-    const {bookName} = req.query;
+const getIssueHistory = asyncHandler(async (req, res) => {
+    const bookName = req.query.bookName;
 
-    const book = await Book.findOne({bookName});
-    if(!book) {
+    if (!bookName) {
+        res.status(400);
+        throw new Error('Book name is required');
+    }
+
+    const book = await Book.findOne({ bookName: bookName });
+    if (!book) {
         res.status(404);
         throw new Error('Book not found');
     }
-
-    const transactions = await Transaction.find({bookId: book._id})
-        .populate('userId', 'name email')
-        .populate('bookId', 'bookName');
-        
+    
+    const transactions = await Transaction.find({ book: book._id });
+    
     const total = transactions.length;
+
     const currentHolder = transactions.find(transaction => !transaction.returnDate);
-
+    console.log(currentHolder);
+    
+    
     res.json({
-        totalCount,
-        currentHolder: currentHolder ? currentHolder.userId : 'No one currently holds this book'
+        total,
+        currentHolder: currentHolder ? currentHolder.user : 'No one holds this book'
     });
+});
 
-})
 
 const getTotalRent = asyncHandler(async(req,res)=>{
     const {bookName} = req.query;
 
     const book = await Book.findOne({bookName});
+    console.log(book);
     if(!book){
-
+        res.status(404);
+        throw new Error('Book not found')
     }
 
-    const transactions = await Transaction.find({bookId:book._id});
+    const transactions = await Transaction.find({book:book._id});
+    console.log(transactions);
+    
     const total = transactions.reduce((sum, transaction) => sum + (transaction.totalRent || 0), 0);
 
     res.json({total});
 
 })
+/* check */
+
 
 const getIssuedBooks = asyncHandler(async(req,res)=>{
-    const { userId, userName } = req.query;
-    if(!userId||!userName) {
+    const userName  = req.body.name;
+
+    if(!userName) {
         res.status(400);
         throw new Error("Please enter all required fields"); 
     }
-    let user;
-
-    if(userId){
-        user = await User.findById(userId);
-    }
-    else{
-        user = await User.findOne({userName})
-    }
+    
+    const user = await User.findOne({name : userName})
+    
+    
 
     if(!user){
         res.status(404);
         throw new Error("User not found");
     }
 
-    const transactions = await Transaction.find({ userId: user._id })
-    .populate('bookId', 'bookName')
-    .populate('userId','userName')
+    const transactions = await Transaction.find({ user: user._id })
+    .populate('book', 'bookName')
+    .populate('user','userName')
     res.json(transactions);
 
 })
@@ -145,8 +160,8 @@ const getIssuedBooksByRange = asyncHandler(async(req,res)=>{
     const transactions = await Transaction.find({
         issueDate: { $gte: new Date(startDate), $lte: new Date(endDate) }
     })
-    .populate('userId', 'name')
-    .populate('bookId', 'bookName');
+    .populate('user', 'name')
+    .populate('book', 'bookName');
 
     res.json(transactions);
 

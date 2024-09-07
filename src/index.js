@@ -12,9 +12,9 @@ connectDB();
 const app = express();
 app.use(express.json());
 
-app.use('/users',userRoutes)
-app.use('/books',bookRoutes);
-app.use('/transactions',transactionRoutes)
+app.use('/api/v1/users',userRoutes)
+app.use('/api/v1/books',bookRoutes);
+app.use('/api/v1/transactions',transactionRoutes)
 
 app.use(errorHandler)
 

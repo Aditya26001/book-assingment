@@ -11,10 +11,15 @@ OUTPUT - list of books with matching values as in input
 */
 const Book = require('../models/books.models.js')
 
+const getAllBooks = (async(req,res)=>{
+    const books = await Book.find({})
+    res.json(books);
+})
+
 const getBooksbyName = (async (req,res)=>{
 
     const find = req.query.name;
-    const books = await Book.find({bookName:{ $regex:find , options:'i'}});
+    const books = await Book.find({bookName:{ $regex:find , $options:'i'}});
     res.json(books);
 })
 
@@ -31,10 +36,11 @@ const getBooksbyRange = (async(req,res)=>{
 })
 
 const getBooksbyFilters = (async(req,res)=>{
-    const {category,name,minRent,maxRent} = req.query;
+    const {category,bookName,minRent,maxRent} = req.query;
+
     const books = await Book.find({
         category : category,
-        bookName:{ $regex:find , options:'i'},
+        bookName:{ $regex:bookName , $options:'i'},
         rentPerDay:{
             $gte : parseInt(minRent) , $lte : parseInt(maxRent)
         }
@@ -42,4 +48,4 @@ const getBooksbyFilters = (async(req,res)=>{
     res.json(books);
 })
 
-module.exports = {getBooksbyName,getBooksbyRange,getBooksbyFilters}
+module.exports = {getAllBooks,getBooksbyName,getBooksbyRange,getBooksbyFilters}
